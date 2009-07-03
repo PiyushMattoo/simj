@@ -1,10 +1,13 @@
 package emulator.altair;
 
+import emulator.core.Breakpoints;
 import emulator.core.CPU;
 import emulator.core.Control;
 import emulator.core.Defs;
 import emulator.core.Device;
+import emulator.core.Globals;
 import emulator.core.Register;
+import emulator.core.SimEvents;
 import emulator.core.Unit;
 
 public class AltairCPU extends CPU {
@@ -21,9 +24,9 @@ public class AltairCPU extends CPU {
 															 * OP?
 															 */
 	public static final int UNIT_OPSTOP = (1 << UNIT_V_OPSTOP);
-	public static final int UNIT_V_CHIP = (UNIT_V_UF + 1); /* 8080 or Z80 */
+	public static final int UNIT_V_CHIP = (Unit.UNIT_V_UF + 1); /* 8080 or Z80 */
 	public static final int UNIT_CHIP = (1 << UNIT_V_CHIP);
-	public static final int UNIT_V_MSIZE = (UNIT_V_UF + 2); /* Memory Size */
+	public static final int UNIT_V_MSIZE = (Unit.UNIT_V_UF + 2); /* Memory Size */
 	public static final int UNIT_MSIZE = (1 << UNIT_V_MSIZE);
 
 	/* Simulator stop codes */
@@ -33,25 +36,23 @@ public class AltairCPU extends CPU {
 	public static final long STOP_IBKPT = 3; /* breakpoint */
 	public static final long STOP_OPCODE = 4;
 
-	Register A, BC, DE, HL, C, Z, AC, S, P, PC, SR, INTE;
+	private Register A, BC, DE, HL, C, Z, AC, S, P, PC, SR, INTE;
 
-	Register SP;
-	Register req, chip, PCX;
-	
-	long saved_PC;
-	
+	private Register SP;
+	private Register req, chip, PCX;
+
+	private long saved_PC;
 
 	/**
 	 * Constructor - set up the environment of the Altair CPU
 	 */
 	public AltairCPU() {
-		
+
 		// This is the CPU device.
 		this.cpuDevice = this;
 
-
 		memory.m = new byte[MEMSIZE]; // Memory
-		
+
 		this.
 
 		// Accumulator
@@ -166,19 +167,28 @@ public class AltairCPU extends CPU {
 		PCX.value = 0;
 		registers.put(PCX.name, PCX);
 
+		// Devices
+		AltairDiskDevice dsk = new AltairDiskDevice();
+		AltairSerialDevice sio = new AltairSerialDevice();
+		
+		devices.put("DSK", dsk);
+		devices.put("SIO", sio);
+		
 	}
 
 	@Override
 	public void deposit(long val, long addr, Unit uptr, long sw) {
-	    if (addr >= MEMSIZE) return;// SCPE_NXM;
-	    memory.m[(int) addr] = (byte) (val & 0377);
-	    return; // SCPE_OK;
+		if (addr >= MEMSIZE)
+			return;// SCPE_NXM;
+		memory.m[(int) addr] = (byte) (val & 0377);
+		return; // SCPE_OK;
 
 	}
 
 	@Override
 	public long examine(long addr, Unit uptr, long sw) {
-		if (addr >= MEMSIZE) return 0; //SCPE_NXM;
+		if (addr >= MEMSIZE)
+			return 0; // SCPE_NXM;
 		return memory.m[(int) addr] & 0377;
 
 	}
@@ -189,7 +199,7 @@ public class AltairCPU extends CPU {
 		Z.value = 0;
 		saved_PC = 0;
 		INTE.value = 0;
-		sim_brk_types = sim_brk_dflt = Defs.SWMASK ('E');
+		Globals.sim_brk_types = Globals.sim_brk_dflt = Defs.SWMASK('E');
 		return;
 
 	}
@@ -197,8 +207,9 @@ public class AltairCPU extends CPU {
 	@Override
 	public long run() {
 
-		int IR, OP, reason, hi, lo, carry, i;
+		int IR, OP, hi, lo, carry, i;
 		long DAR;
+		long reason;
 
 		int PC;
 
@@ -210,7 +221,8 @@ public class AltairCPU extends CPU {
 
 		while (reason == 0) { /* loop until halted */
 			if (Control.sim_interval <= 0) { /* check clock queue */
-				if (reason = sim_process_event())
+				reason = SimEvents.sim_process_event();
+				if (reason != 0)
 					break;
 			}
 
@@ -223,14 +235,15 @@ public class AltairCPU extends CPU {
 
 			} /* end interrupt */
 
-			if (sim_brk_summ && sim_brk_test(PC, Defs.SWMASK('E'))) { /* breakpoint? */
+			if (((Globals.sim_brk_summ != 0) && (Breakpoints.sim_brk_test(PC,
+					Defs.SWMASK('E'))) != 0)) { /* breakpoint? */
 				reason = (int) STOP_IBKPT; /* stop simulation */
 				break;
 			}
 
-			if (PC == 0177400) { /* BOOT PROM address */
+			if (PC == 0xff00) { /* BOOT PROM address */
 				for (i = 0; i < 250; i++) {
-					memory.m[(int) (i + 0177400)] = bootrom[i] & 0xFF;
+					memory.m[(int) (i + 0xff00)] = (byte) (bootrom[i] & 0xFF);
 				}
 			}
 
@@ -610,7 +623,7 @@ public class AltairCPU extends CPU {
 					DAR += 6;
 					A.value &= 0xF0;
 					A.value |= DAR & 0x0F;
-					if ((DAR & 0x10) !=0)
+					if ((DAR & 0x10) != 0)
 						AC.value = 0200000;
 					else
 						AC.value = 0;
@@ -623,7 +636,7 @@ public class AltairCPU extends CPU {
 					A.value &= 0x0F;
 					A.value |= (DAR << 4);
 				}
-				if (((DAR << 4) & 0x100) !=0)
+				if (((DAR << 4) & 0x100) != 0)
 					C.value = 0200000;
 				else
 					C.value = 0;
@@ -726,14 +739,87 @@ public class AltairCPU extends CPU {
 				if (DAR == 0xFF) {
 					A.value = (SR.value >> 8) & 0xFF;
 				} else {
-					A.value = dev_table[DAR].routine(0, 0);
+					AltairDiskDevice dsk = (AltairDiskDevice) devices.get("DSK");
+					AltairSerialDevice sio = (AltairSerialDevice) devices.get("SIO");
+					switch ((int) DAR) {
+					case 8:
+
+						// dsk10
+						A.value = dsk.dsk10(0, 0);
+						break;
+					case 9:
+						// dsk11
+						A.value = dsk.dsk11(0, 0);
+						break;
+					case 10:
+						// dsk12
+						A.value = dsk.dsk12(0, 0);
+						break;
+						
+					case 16:
+						// sio0s
+						A.value = sio.sio0s(0, 0);
+						break;
+					case 17:
+						// sio0d
+						A.value = sio.sio0d(0, 0);
+						break;
+					case 18:
+						// sio1s
+						A.value = sio.sio1s(0, 0);
+						break;
+					case 19:
+						// sio1d
+						A.value = sio.sio1d(0, 0);
+						break;
+
+					default:
+
+						A.value = 0377;
+
+					}
 				}
 				break;
 			}
 			case 0323: { /* OUT */
 				DAR = memory.m[PC] & 0xFF;
 				PC++;
-				dev_table[DAR].routine(1, A.value);
+				AltairDiskDevice dsk = (AltairDiskDevice) devices.get("DSK");
+				AltairSerialDevice sio = (AltairSerialDevice) devices.get("SIO");
+				switch((int) DAR) {
+				case 8:
+					// dsk10
+					dsk.dsk10(1, A.value);
+					break;
+
+				case 9:
+					// dsk11
+					dsk.dsk11(1, A.value);
+					break;
+				case 10:
+					// dsk12
+					dsk.dsk12(1, A.value);
+					break;
+				case 16:
+					// sio0s
+					sio.sio0s(1, A.value);
+					break;
+				case 17:
+					// sio0d
+					sio.sio0d(1, A.value);
+					break;
+				case 18:
+					// sio1s
+					sio.sio1s(1, A.value);
+					break;
+				case 19:
+					// sio1d
+					sio.sio1d(1, A.value);
+					break;
+				default:
+					
+				}
+
 				break;
 			}
 
@@ -757,12 +843,6 @@ public class AltairCPU extends CPU {
 	public void setSize(Unit uptr, long val, String cptr) {
 		// TODO Auto-generated method stub
 
-	}
-
-	@Override
-	public int action(Unit up) {
-		// TODO Auto-generated method stub
-		return 0;
 	}
 
 	// Utility routines, macros, etc
@@ -1126,5 +1206,41 @@ public class AltairCPU extends CPU {
 		// TODO Auto-generated method stub
 		return 0;
 	}
+
+	/* Altair MITS standard BOOT EPROM, fits in upper 256 bytes of memory */
+
+	private int bootrom[] = {
+	    0041, 0000, 0114, 0021, 0030, 0377, 0016, 0346,
+	    0032, 0167, 0023, 0043, 0015, 0302, 0010, 0377,
+	    0303, 0000, 0114, 0000, 0000, 0000, 0000, 0000,
+	    0363, 0061, 0142, 0115, 0257, 0323, 0010, 0076,     /* 46000 */
+	    0004, 0323, 0011, 0303, 0031, 0114, 0333, 0010,     /* 46010 */
+	    0346, 0002, 0302, 0016, 0114, 0076, 0002, 0323,     /* 46020 */
+	    0011, 0333, 0010, 0346, 0100, 0302, 0016, 0114,
+	    0021, 0000, 0000, 0006, 0000, 0333, 0010, 0346,
+	    0004, 0302, 0045, 0114, 0076, 0020, 0365, 0325,
+	    0305, 0325, 0021, 0206, 0200, 0041, 0324, 0114,
+	    0333, 0011, 0037, 0332, 0070, 0114, 0346, 0037,
+	    0270, 0302, 0070, 0114, 0333, 0010, 0267, 0372,
+	    0104, 0114, 0333, 0012, 0167, 0043, 0035, 0312,
+	    0132, 0114, 0035, 0333, 0012, 0167, 0043, 0302,
+	    0104, 0114, 0341, 0021, 0327, 0114, 0001, 0200,
+	    0000, 0032, 0167, 0276, 0302, 0301, 0114, 0200,
+	    0107, 0023, 0043, 0015, 0302, 0141, 0114, 0032,
+	    0376, 0377, 0302, 0170, 0114, 0023, 0032, 0270,
+	    0301, 0353, 0302, 0265, 0114, 0361, 0361, 0052,
+	    0325, 0114, 0325, 0021, 0000, 0377, 0315, 0316,
+	    0114, 0321, 0332, 0276, 0114, 0315, 0316, 0114,
+	    0322, 0256, 0114, 0004, 0004, 0170, 0376, 0040,
+	    0332, 0054, 0114, 0006, 0001, 0312, 0054, 0114,
+	    0333, 0010, 0346, 0002, 0302, 0240, 0114, 0076,
+	    0001, 0323, 0011, 0303, 0043, 0114, 0076, 0200,
+	    0323, 0010, 0303, 0000, 0000, 0321, 0361, 0075,
+	    0302, 0056, 0114, 0076, 0103, 0001, 0076, 0117,
+	    0001, 0076, 0115, 0107, 0076, 0200, 0323, 0010,
+	    0170, 0323, 0001, 0303, 0311, 0114, 0172, 0274,
+	    0300, 0173, 0275, 0311, 0204, 0000, 0114, 0044,
+	    0026, 0126, 0026, 0000, 0000, 0000, 0000, 0000
+	};
 
 }

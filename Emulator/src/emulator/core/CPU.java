@@ -8,6 +8,8 @@ public abstract class CPU extends Device {
 	public Map<String, Register> registers = new HashMap<String, Register>();
 	public Memory memory;
 	public Map<String, Modifier> modifiers = new HashMap<String, Modifier>();
+	public Map<String, Device> devices = new HashMap<String, Device>();
+	
 	public Device cpuDevice;
 
 	/**

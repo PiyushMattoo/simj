@@ -97,7 +97,7 @@ public class AltairDiskDevice extends Device {
 	 * in hardware.
 	 */
 
-	long dsk10(int io, int data) throws IOException {
+	long dsk10(int io, long value) throws IOException {
 
 		if (io == 0) { /* IN: return flags */
 			return ((~cur_flags[cur_disk]) & 0xFF); /* Return the COMPLEMENT! */
@@ -109,8 +109,8 @@ public class AltairDiskDevice extends Device {
 			writebuf();
 
 		/* printf("\n[%o] OUT 10: %x", PCX, data); */
-		cur_disk = data & 0x0F;
-		if ((data & 0x80) != 0) {
+		cur_disk = (int) (value & 0x0F);
+		if ((value & 0x80) != 0) {
 			cur_flags[cur_disk] = 0;
 
 			/* Disable drive */
@@ -130,7 +130,7 @@ public class AltairDiskDevice extends Device {
 
 	/* Disk Drive Status/Functions */
 
-	long dsk11(int io, int data) throws IOException {
+	long dsk11(int io, long value) throws IOException {
 		long stat;
 
 		if (io == 0) { /* Read sector position */
@@ -157,7 +157,7 @@ public class AltairDiskDevice extends Device {
 			return (0); /* no drive selected - can do nothin */
 
 		/* printf("\n[%o] OUT 11: %x", PCX, data); */
-		if ((data & 0x01) != 0) { /* Step head in */
+		if ((value & 0x01) != 0) { /* Step head in */
 			cur_track[cur_disk]++;
 			if (cur_track[cur_disk] > 76)
 				cur_track[cur_disk] = 76;
@@ -167,7 +167,7 @@ public class AltairDiskDevice extends Device {
 			cur_byte[cur_disk] = 0377;
 		}
 
-		if ((data & 0x02) != 0) { /* Step head out */
+		if ((value & 0x02) != 0) { /* Step head out */
 			cur_track[cur_disk]--;
 			if (cur_track[cur_disk] < 0) {
 				cur_track[cur_disk] = 0;
@@ -182,12 +182,12 @@ public class AltairDiskDevice extends Device {
 		if (dirty)
 			writebuf();
 
-		if ((data & 0x04) != 0) { /* Head load */
+		if ((value & 0x04) != 0) { /* Head load */
 			cur_flags[cur_disk] |= 0x04; /* turn on head loaded bit */
 			cur_flags[cur_disk] |= 0x80; /* turn on 'read data available */
 		}
 
-		if ((data & 0x08) != 0) { /* Head Unload */
+		if ((value & 0x08) != 0) { /* Head Unload */
 			cur_flags[cur_disk] &= 0xFB; /* off on 'head loaded' */
 			cur_flags[cur_disk] &= 0x7F; /* off on 'read data avail */
 			cur_sect[cur_disk] = 0377;
@@ -196,7 +196,7 @@ public class AltairDiskDevice extends Device {
 
 		/* Interrupts & head current are ignored */
 
-		if ((data & 0x80) != 0) { /* write sequence start */
+		if ((value & 0x80) != 0) { /* write sequence start */
 			cur_byte[cur_disk] = 0;
 			cur_flags[cur_disk] |= 0x01; /* enter new write data on */
 		}
@@ -205,7 +205,7 @@ public class AltairDiskDevice extends Device {
 
 	/* Disk Data In/Out */
 
-	int dsk12(int io, int data) throws IOException {
+	int dsk12(int io, long value) throws IOException {
 		int i;
 		long pos;
 		Unit uptr;
@@ -230,14 +230,14 @@ public class AltairDiskDevice extends Device {
 		} else {
 			if (cur_byte[cur_disk] > 136) {
 				i = cur_byte[cur_disk];
-				uptr.filebuf.put(i, (byte) (data & 0xFF));
+				uptr.filebuf.put(i, (byte) (value & 0xFF));
 				writebuf();
 				return (0);
 			}
 			i = cur_byte[cur_disk];
 			dirty = true;
 			dptr = uptr;
-			uptr.filebuf.put(i, (byte) (data & 0xFF));
+			uptr.filebuf.put(i, (byte) (value & 0xFF));
 			cur_byte[cur_disk]++;
 			return (0);
 		}

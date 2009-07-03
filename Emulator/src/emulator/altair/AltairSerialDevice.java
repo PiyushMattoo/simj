@@ -71,12 +71,12 @@ public class AltairSerialDevice extends Device {
     to the device.
 */
 
-long sio0s(int io, int data)
+long sio0s(int io, long value)
 {
     if (io == 0) {
         return (STAT.value);
     } else {
-        if (data == 0x03) {                             /* reset port! */
+        if (value == 0x03) {                             /* reset port! */
             STAT.value = 0x02;
             DATA.value = 0;
             POS.value = 0;
@@ -85,20 +85,20 @@ long sio0s(int io, int data)
     }
 }
 
-long sio0d(int io, int data)
+long sio0d(int io, long value)
 {
     if (io == 0) {
         STAT.value = STAT.value & 0xFE;
         return (DATA.value);
     } else {
-        sim_putchar(data);
+        sim_putchar(value);
     }
     return 0;
 }
 
 /* Port 2 controls the PTR/PTP devices */
 
-long sio1s(int io, int data)
+long sio1s(int io, long value)
 {
     if (io == 0) {
         if ((ptr_unit.flags & Unit.UNIT_ATT) == 0)           /* attached? */
@@ -107,7 +107,7 @@ long sio1s(int io, int data)
             return 0x02;
         return (0x03);                                  /* ready to read/write */
     } else {
-        if (data == 0x03) {
+        if (value == 0x03) {
             ptr_unit.u3 = 0;
             ptr_unit.buf = 0;
             ptr_unit.pos = 0;
@@ -119,7 +119,7 @@ long sio1s(int io, int data)
     }
 }
 
-long sio1d(int io, int data)
+long sio1d(int io, long value)
 {
     int temp;
     Unit uptr;
@@ -138,7 +138,7 @@ long sio1d(int io, int data)
         return (temp & 0xFF);
     } else {
 
-        putc(data, ptp_unit.fileref);
+        putc(value, ptp_unit.fileref);
         ptp_unit.pos++;
     }
     return 0;

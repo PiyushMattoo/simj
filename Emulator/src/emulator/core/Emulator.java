@@ -7,15 +7,25 @@ import java.awt.Graphics;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
-
-import thor.app.VT100Telnet;
 
 import net.wimpi.telnetd.BootException;
 import net.wimpi.telnetd.TelnetD;
+import thor.app.VT100Telnet;
+import emulator.altair.AltairSystem;
 
 public class Emulator {
 
+	public List<SimSystem> systems = new ArrayList<SimSystem>();
+	
+	public Emulator() {
+	
+		// Add in known systems.  TODO Makes this Sprung in or something
+		systems.add(new AltairSystem());
+		
+	}
 	/**
 	 * @param args
 	 */
