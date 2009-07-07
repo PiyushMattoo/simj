@@ -41,8 +41,8 @@ public class HelpCommandExecutor implements ICommandExecutor {
 	/**
 	 * Constructor.
 	 * 
-	 * @param commands
-	 *            the set of commands for the help
+	 * @param emulator.commands
+	 *            the set of emulator.commands for the help
 	 */
 	public HelpCommandExecutor(Set<Command> commands) {
 		this.commands = commands;

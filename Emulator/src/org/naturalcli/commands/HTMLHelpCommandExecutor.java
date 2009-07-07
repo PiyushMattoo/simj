@@ -35,14 +35,14 @@ import org.naturalcli.ICommandExecutor;
  */
 public class HTMLHelpCommandExecutor implements ICommandExecutor {
 
-	/** Sets of commands */
+	/** Sets of emulator.commands */
 	private Set<Command> commands;
 
 	/**
 	 * Constructor.
 	 * 
-	 * @param commands
-	 *            the set of commands for the help
+	 * @param emulator.commands
+	 *            the set of emulator.commands for the help
 	 */
 	public HTMLHelpCommandExecutor(Set<Command> commands) {
 		this.commands = commands;

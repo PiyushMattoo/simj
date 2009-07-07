@@ -39,7 +39,7 @@ public class ExecuteFileCommand  extends Command {
 	public ExecuteFileCommand(NaturalCLI naturalCLI) 
 	{
 		try {
-			prepare("execute file <filename:string>", "Execute the commands on file.",
+			prepare("execute file <filename:string>", "Execute the emulator.commands on file.",
 					new ExecuteFileCommandExecutor(naturalCLI)
 			);
 		} catch (InvalidSyntaxException e) {

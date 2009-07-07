@@ -36,12 +36,12 @@ public class HTMLHelpCommand extends Command {
 
 	/**
 	 * Constructor.
-	 * @param commands the set of commands for the help
+	 * @param emulator.commands the set of emulator.commands for the help
 	 */	
 	public HTMLHelpCommand(Set<Command> commands) 
 	{
 		try {
-			prepare("htmlhelp", "Shows the commands help on HTML format.",
+			prepare("htmlhelp", "Shows the emulator.commands help on HTML format.",
 					new HTMLHelpCommandExecutor(commands)
 			);
 		} catch (InvalidSyntaxException e) {

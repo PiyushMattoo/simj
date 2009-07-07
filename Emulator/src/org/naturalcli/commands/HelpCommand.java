@@ -37,7 +37,7 @@ public class HelpCommand extends Command {
 	public HelpCommand(Set<Command> commands) 
 	{
 		try {
-			prepare("help", "Shows the commands help on plain text.",
+			prepare("help", "Shows the emulator.commands help on plain text.",
 					new HelpCommandExecutor(commands)
 			);
 		} catch (InvalidSyntaxException e) {
