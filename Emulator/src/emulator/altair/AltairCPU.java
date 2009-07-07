@@ -1,11 +1,14 @@
 package emulator.altair;
 
+import java.io.IOException;
+
 import emulator.core.Breakpoints;
 import emulator.core.CPU;
 import emulator.core.Control;
 import emulator.core.Defs;
 import emulator.core.Device;
 import emulator.core.Globals;
+import emulator.core.Memory;
 import emulator.core.Register;
 import emulator.core.SimEvents;
 import emulator.core.Unit;
@@ -50,8 +53,9 @@ public class AltairCPU extends CPU {
 
 		// This is the CPU device.
 		this.cpuDevice = this;
-
-		memory.m = new byte[MEMSIZE]; // Memory
+		memory = new Memory();
+		
+		memory.m = new int[MEMSIZE]; // Memory
 
 		this.
 
@@ -180,7 +184,7 @@ public class AltairCPU extends CPU {
 	public void deposit(long val, long addr, Unit uptr, long sw) {
 		if (addr >= MEMSIZE)
 			return;// SCPE_NXM;
-		memory.m[(int) addr] = (byte) (val & 0377);
+		memory.m[(int) addr] = (int) (val & 0377);
 		return; // SCPE_OK;
 
 	}
@@ -243,7 +247,7 @@ public class AltairCPU extends CPU {
 
 			if (PC == 0xff00) { /* BOOT PROM address */
 				for (i = 0; i < 250; i++) {
-					memory.m[(int) (i + 0xff00)] = (byte) (bootrom[i] & 0xFF);
+					memory.m[(int) (i + 0xff00)] = (bootrom[i] & 0xFF);
 				}
 			}
 
@@ -293,7 +297,7 @@ public class AltairCPU extends CPU {
 			}
 			if ((OP & 0xEF) == 0x02) { /* STAX */
 				DAR = getpair((OP >> 4) & 0x03);
-				memory.m[(int) DAR] = (byte) getreg(7);
+				memory.m[(int) DAR] =  (int) getreg(7);
 				continue;
 			}
 
@@ -322,9 +326,9 @@ public class AltairCPU extends CPU {
 					hi = memory.m[PC];
 					PC++;
 					SP.value--;
-					memory.m[(int) SP.value] = (byte) ((PC >> 8) & 0xff);
+					memory.m[(int) SP.value] = ((PC >> 8) & 0xff);
 					SP.value--;
-					memory.m[(int) SP.value] = (byte) (PC & 0xff);
+					memory.m[(int) SP.value] =  (PC & 0xff);
 					PC = (hi << 8) + lo;
 				} else {
 					PC += 2;
@@ -342,9 +346,9 @@ public class AltairCPU extends CPU {
 			}
 			if ((OP & 0xC7) == 0xC7) { /* RST */
 				SP.value--;
-				memory.m[(int) SP.value] = (byte) ((PC >> 8) & 0xff);
+				memory.m[(int) SP.value] = ((PC >> 8) & 0xff);
 				SP.value--;
-				memory.m[(int) SP.value] = (byte) (PC & 0xff);
+				memory.m[(int) SP.value] =  (PC & 0xff);
 				PC = OP & 0x38;
 				continue;
 			}
@@ -352,9 +356,9 @@ public class AltairCPU extends CPU {
 			if ((OP & 0xCF) == 0xC5) { /* PUSH */
 				DAR = getpush((OP >> 4) & 0x03);
 				SP.value--;
-				memory.m[(int) SP.value] = (byte) ((DAR >> 8) & 0xff);
+				memory.m[(int) SP.value] =  (int) ((DAR >> 8) & 0xff);
 				SP.value--;
-				memory.m[(int) SP.value] = (byte) (DAR & 0xff);
+				memory.m[(int) SP.value] =  (int) (DAR & 0xff);
 				continue;
 			}
 			if ((OP & 0xCF) == 0xC1) { /* POP */
@@ -517,9 +521,9 @@ public class AltairCPU extends CPU {
 				hi = memory.m[PC];
 				PC++;
 				SP.value--;
-				memory.m[(int) SP.value] = (byte) ((PC >> 8) & 0xff);
+				memory.m[(int) SP.value] =  ((PC >> 8) & 0xff);
 				SP.value--;
-				memory.m[(int) SP.value] = (byte) (PC & 0xff);
+				memory.m[(int) SP.value] =  (PC & 0xff);
 				PC = (hi << 8) + lo;
 				break;
 			}
@@ -539,7 +543,7 @@ public class AltairCPU extends CPU {
 				hi = memory.m[PC];
 				PC++;
 				DAR = (hi << 8) + lo;
-				memory.m[(int) DAR] = (byte) A.value;
+				memory.m[(int) DAR] =  (int) A.value;
 				break;
 			}
 			case 072: { /* LDA */
@@ -557,9 +561,9 @@ public class AltairCPU extends CPU {
 				hi = memory.m[PC];
 				PC++;
 				DAR = (hi << 8) + lo;
-				memory.m[(int) DAR] = (byte) HL.value;
+				memory.m[(int) DAR] =  (int) HL.value;
 				DAR++;
-				memory.m[(int) DAR] = (byte) ((HL.value >> 8) & 0x00ff);
+				memory.m[(int) DAR] =  (int) ((HL.value >> 8) & 0x00ff);
 				break;
 			}
 			case 052: { /* LHLD */
@@ -716,8 +720,8 @@ public class AltairCPU extends CPU {
 			case 0343: { /* XTHL */
 				lo = memory.m[(int) SP.value];
 				hi = memory.m[(int) (SP.value + 1)];
-				memory.m[(int) SP.value] = (byte) (HL.value & 0xFF);
-				memory.m[(int) (SP.value + 1)] = (byte) ((HL.value >> 8) & 0xFF);
+				memory.m[(int) SP.value] = (int) (HL.value & 0xFF);
+				memory.m[(int) (SP.value + 1)] = (int) ((HL.value >> 8) & 0xFF);
 				HL.value = (hi << 8) + lo;
 				break;
 			}
@@ -745,15 +749,30 @@ public class AltairCPU extends CPU {
 					case 8:
 
 						// dsk10
-						A.value = dsk.dsk10(0, 0);
+						try {
+							A.value = dsk.dsk10(0, 0);
+						} catch (IOException e2) {
+							// TODO Auto-generated catch block
+							e2.printStackTrace();
+						}
 						break;
 					case 9:
 						// dsk11
-						A.value = dsk.dsk11(0, 0);
+						try {
+							A.value = dsk.dsk11(0, 0);
+						} catch (IOException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
 						break;
 					case 10:
 						// dsk12
-						A.value = dsk.dsk12(0, 0);
+						try {
+							A.value = dsk.dsk12(0, 0);
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
 						break;
 						
 					case 16:
@@ -789,16 +808,31 @@ public class AltairCPU extends CPU {
 				switch((int) DAR) {
 				case 8:
 					// dsk10
-					dsk.dsk10(1, A.value);
+					try {
+						dsk.dsk10(1, A.value);
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 					break;
 
 				case 9:
 					// dsk11
-					dsk.dsk11(1, A.value);
+					try {
+						dsk.dsk11(1, A.value);
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 					break;
 				case 10:
 					// dsk12
-					dsk.dsk12(1, A.value);
+					try {
+						dsk.dsk12(1, A.value);
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 					break;
 				case 16:
 					// sio0s
@@ -1047,7 +1081,7 @@ public class AltairCPU extends CPU {
 			HL.value = HL.value | dAR;
 			break;
 		case 6:
-			memory.m[(int) HL.value] = (byte) (dAR & 0xff);
+			memory.m[(int) HL.value] =(int) (dAR & 0xff);
 			break;
 		case 7:
 			A.value = dAR & 0xff;
