@@ -19,8 +19,8 @@ import org.naturalcli.NaturalCLI;
 import org.naturalcli.commands.ExecuteFileCommand;
 import org.naturalcli.commands.HelpCommand;
 
-import commands.AttachCommand;
-import commands.ShowCommand;
+import emulator.commands.AttachCommand;
+import emulator.commands.ShowCommand;
 
 public class EmuShell implements Shell {
 	public static Connection conn;
@@ -38,7 +38,7 @@ public class EmuShell implements Shell {
 		  super();
 		  
 		  
-		   // Add the commands that can be understood
+		   // Add the emulator.commands that can be understood
 		   cs.add(new HelpCommand(cs)); // help
 		   cs.add(new ExecuteFileCommand(nc)); // execute file <filename:string>
 		   cs.add(new ShowCommand()); // Show command
