@@ -21,7 +21,7 @@
 package org.naturalcli;
 
 /**
- * A parameter type for all the commands.
+ * A parameter type for all the emulator.commands.
  *
  * @author Ferran Busquets
  */

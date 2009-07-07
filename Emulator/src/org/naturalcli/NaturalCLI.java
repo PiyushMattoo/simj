@@ -27,7 +27,7 @@ import net.wimpi.telnetd.io.BasicTerminalIO;
 
 
 /**
- * A set of commands understood by the CLI
+ * A set of emulator.commands understood by the CLI
  * 
  * @author Ferran Busquets
  */
@@ -40,7 +40,7 @@ public class NaturalCLI {
     /**
      * Creates a new instance.
      * 
-     * @param commands the set of commands that can be executed.
+     * @param emulator.commands the set of emulator.commands that can be executed.
      * @param pv the parameter validator.
      */
     public NaturalCLI(Set<Command> commands, ParameterValidator pv)    
@@ -52,7 +52,7 @@ public class NaturalCLI {
     /** 
      * Creates a new instance with the default parameter validator.
      * 
-     * @param commands the set of commands that can be executed.
+     * @param emulator.commands the set of emulator.commands that can be executed.
      */
     public NaturalCLI(Set<Command> commands) 
     {
