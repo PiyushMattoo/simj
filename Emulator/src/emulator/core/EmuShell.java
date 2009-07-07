@@ -18,7 +18,9 @@ import org.naturalcli.ExecutionException;
 import org.naturalcli.NaturalCLI;
 import org.naturalcli.commands.ExecuteFileCommand;
 import org.naturalcli.commands.HelpCommand;
-import org.naturalcli.commands.NullCommand;
+
+import commands.AttachCommand;
+import commands.ShowCommand;
 
 public class EmuShell implements Shell {
 	public static Connection conn;
@@ -40,6 +42,7 @@ public class EmuShell implements Shell {
 		   cs.add(new HelpCommand(cs)); // help
 		   cs.add(new ExecuteFileCommand(nc)); // execute file <filename:string>
 		   cs.add(new ShowCommand()); // Show command
+		   cs.add(new AttachCommand()); // attach command
 
 	  }
 	@Override
