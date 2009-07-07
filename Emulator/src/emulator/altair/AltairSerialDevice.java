@@ -1,5 +1,7 @@
 package emulator.altair;
 
+import java.io.IOException;
+
 import emulator.core.Defs;
 import emulator.core.Device;
 import emulator.core.Register;
@@ -58,7 +60,7 @@ public class AltairSerialDevice extends Device {
 	public int reset(Device dp) {
 	    ptp_unit.buf = 0;
 	    ptp_unit.u3 = 0x02;
-	    sim_cancel (&ptp_unit);                             /* deactivate unit */
+	    //TODO sim_cancel (&ptp_unit);                             /* deactivate unit */
 	    return (int) Defs.SCPE_OK;
 	}
 
@@ -91,7 +93,7 @@ long sio0d(int io, long value)
         STAT.value = STAT.value & 0xFE;
         return (DATA.value);
     } else {
-        sim_putchar(value);
+        // TODO sim_putchar(value);
     }
     return 0;
 }
@@ -121,24 +123,32 @@ long sio1s(int io, long value)
 
 long sio1d(int io, long value)
 {
-    int temp;
-    Unit uptr;
+    int temp = 0;
 
     if (io == 0) {
         if ((ptr_unit.flags & Unit.UNIT_ATT) == 0)           /* attached? */
             return 0;
         if (ptr_unit.u3 != 0)
             return 0;
-        uptr = ptr_unit;
-        if ((temp = getc(ptr_unit.fileref)) == EOF) {    /* end of file? */
-            ptr_unit.u3 = 0x01;
-            return 0;
-        }
+        try {
+			temp = ptr_unit.fileref.read();
+		} catch (IOException e) {
+			// EOF, or other problem.
+			ptr_unit.u3 = 0x01;
+			return 0;
+
+		}
         ptr_unit.pos++;
         return (temp & 0xFF);
     } else {
 
-        putc(value, ptp_unit.fileref);
+    	try {
+			ptp_unit.fileref.write((int) (value & 0xff));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+        //putc(value, ptp_unit.fileref);
         ptp_unit.pos++;
     }
     return 0;

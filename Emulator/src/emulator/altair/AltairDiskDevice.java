@@ -24,14 +24,10 @@ public class AltairDiskDevice extends Device {
 
 	/* Global data on status */
 
-	private static int cur_disk = 8; /* Currently selected drive */
-	private static int cur_track[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0377 };
-	private static int cur_sect[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0377 };
-	private static int cur_byte[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0377 };
-	private static int cur_flags[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+	private int cur_disk = 8; /* Currently selected drive */
 
 	boolean dirty = false; /* 1 when buffer has unwritten data in it */
-	Unit dptr; /* fileref to write dirty buffer to */
+	AltairDiskUnit dptr = null;
 
 	static long dsk_rwait = 100; /* rotate latency */
 
@@ -100,7 +96,11 @@ public class AltairDiskDevice extends Device {
 	long dsk10(int io, long value) throws IOException {
 
 		if (io == 0) { /* IN: return flags */
-			return ((~cur_flags[cur_disk]) & 0xFF); /* Return the COMPLEMENT! */
+			dptr = (AltairDiskUnit) this.units.get(cur_disk);
+			return ((~dptr.cur_flags) & 0xFF); /*
+														 * Return the
+														 * COMPLEMENT!
+														 */
 		}
 
 		/* OUT: Controller set/reset/enable/disable */
@@ -110,21 +110,22 @@ public class AltairDiskDevice extends Device {
 
 		/* printf("\n[%o] OUT 10: %x", PCX, data); */
 		cur_disk = (int) (value & 0x0F);
+		dptr = (AltairDiskUnit) this.units.get(cur_disk);
 		if ((value & 0x80) != 0) {
-			cur_flags[cur_disk] = 0;
+			dptr.cur_flags = 0;
 
 			/* Disable drive */
 			// int off = 0;
 			// if (cur_disk == 0377) off = 1;
-			cur_sect[cur_disk] = 0377;
-			cur_byte[cur_disk] = 0377;
+			dptr.cur_sect = 0377;
+			dptr.cur_byte = 0377;
 			return (0);
 		}
-		cur_flags[cur_disk] = 0x1A; /* Enable: head move true */
-		cur_sect[cur_disk] = 0377; /* reset internal counters */
-		cur_byte[cur_disk] = 0377;
-		if (cur_track[cur_disk] == 0)
-			cur_flags[cur_disk] |= 0x40; /* track 0 if there */
+		dptr.cur_flags = 0x1A; /* Enable: head move true */
+		dptr.cur_sect = 0377; /* reset internal counters */
+		dptr.cur_byte = 0377;
+		if (dptr.cur_track == 0)
+			dptr.cur_flags |= 0x40; /* track 0 if there */
 		return (0);
 	}
 
@@ -132,17 +133,17 @@ public class AltairDiskDevice extends Device {
 
 	long dsk11(int io, long value) throws IOException {
 		long stat;
-
+		dptr = (AltairDiskUnit) this.units.get(cur_disk);
 		if (io == 0) { /* Read sector position */
 			/* printf("\n[%o] IN 11", PCX); */
 			if (dirty)
 				writebuf();
-			if ((cur_flags[cur_disk] & 0x04) != 0) { /* head loaded? */
-				cur_sect[cur_disk]++;
-				if (cur_sect[cur_disk] > 31)
-					cur_sect[cur_disk] = 0;
-				cur_byte[cur_disk] = 0377;
-				stat = cur_sect[cur_disk] << 1;
+			if ((dptr.cur_flags & 0x04) != 0) { /* head loaded? */
+				dptr.cur_sect++;
+				if (dptr.cur_sect > 31)
+					dptr.cur_sect = 0;
+				dptr.cur_byte = 0377;
+				stat = dptr.cur_sect << 1;
 				stat &= 0x3E; /* return 'sector true' bit = 0 (true) */
 				stat |= 0xC0; /* set on 'unused' bits */
 				return (stat);
@@ -158,47 +159,47 @@ public class AltairDiskDevice extends Device {
 
 		/* printf("\n[%o] OUT 11: %x", PCX, data); */
 		if ((value & 0x01) != 0) { /* Step head in */
-			cur_track[cur_disk]++;
-			if (cur_track[cur_disk] > 76)
-				cur_track[cur_disk] = 76;
+			dptr.cur_track++;
+			if (dptr.cur_track > 76)
+				dptr.cur_track = 76;
 			if (dirty)
 				writebuf();
-			cur_sect[cur_disk] = 0377;
-			cur_byte[cur_disk] = 0377;
+			dptr.cur_sect = 0377;
+			dptr.cur_byte = 0377;
 		}
 
 		if ((value & 0x02) != 0) { /* Step head out */
-			cur_track[cur_disk]--;
-			if (cur_track[cur_disk] < 0) {
-				cur_track[cur_disk] = 0;
-				cur_flags[cur_disk] |= 0x40; /* track 0 if there */
+			dptr.cur_track--;
+			if (dptr.cur_track < 0) {
+				dptr.cur_track = 0;
+				dptr.cur_flags |= 0x40; /* track 0 if there */
 			}
 			if (dirty)
 				writebuf();
-			cur_sect[cur_disk] = 0377;
-			cur_byte[cur_disk] = 0377;
+			dptr.cur_sect = 0377;
+			dptr.cur_byte = 0377;
 		}
 
 		if (dirty)
 			writebuf();
 
 		if ((value & 0x04) != 0) { /* Head load */
-			cur_flags[cur_disk] |= 0x04; /* turn on head loaded bit */
-			cur_flags[cur_disk] |= 0x80; /* turn on 'read data available */
+			dptr.cur_flags |= 0x04; /* turn on head loaded bit */
+			dptr.cur_flags |= 0x80; /* turn on 'read data available */
 		}
 
 		if ((value & 0x08) != 0) { /* Head Unload */
-			cur_flags[cur_disk] &= 0xFB; /* off on 'head loaded' */
-			cur_flags[cur_disk] &= 0x7F; /* off on 'read data avail */
-			cur_sect[cur_disk] = 0377;
-			cur_byte[cur_disk] = 0377;
+			dptr.cur_flags &= 0xFB; /* off on 'head loaded' */
+			dptr.cur_flags &= 0x7F; /* off on 'read data avail */
+			dptr.cur_sect = 0377;
+			dptr.cur_byte = 0377;
 		}
 
 		/* Interrupts & head current are ignored */
 
 		if ((value & 0x80) != 0) { /* write sequence start */
-			cur_byte[cur_disk] = 0;
-			cur_flags[cur_disk] |= 0x01; /* enter new write data on */
+			dptr.cur_byte = 0;
+			dptr.cur_flags |= 0x01; /* enter new write data on */
 		}
 		return 0;
 	}
@@ -208,37 +209,36 @@ public class AltairDiskDevice extends Device {
 	int dsk12(int io, long value) throws IOException {
 		int i;
 		long pos;
-		Unit uptr;
 
-		uptr = this.units.get(cur_disk);
+		dptr = (AltairDiskUnit) this.units.get(cur_disk);
 		if (io == 0) {
-			if ((i = cur_byte[cur_disk]) < 138) { /* just get from buffer */
-				cur_byte[cur_disk]++;
-				return (uptr.filebuf.get(i) & 0xFF);
+			if ((i = dptr.cur_byte) < 138) { /* just get from buffer */
+				dptr.cur_byte++;
+				return (dptr.filebuf.get(i) & 0xFF);
 			}
 			/* physically read the sector */
 			/*
 			 * printf("\n[%o] IN 12 (READ) T%d S%d", PCX, cur_track[cur_disk],
 			 * cur_sect[cur_disk]);
 			 */
-			pos = DSK_TRACSIZE * cur_track[cur_disk];
-			pos += DSK_SECTSIZE * cur_sect[cur_disk];
-			FIO.sim_fseek(uptr.fileref, pos, 0);
-			FIO.sim_fread(uptr.filebuf, uptr.fileref);
-			cur_byte[cur_disk] = 1;
-			return (uptr.filebuf.get(0) & 0xFF);
+			pos = DSK_TRACSIZE * dptr.cur_track;
+			pos += DSK_SECTSIZE * dptr.cur_sect;
+			FIO.sim_fseek(dptr.fileref, pos, 0);
+			FIO.sim_fread(dptr.filebuf, dptr.fileref);
+			dptr.cur_byte = 1;
+			return (dptr.filebuf.get(0) & 0xFF);
 		} else {
-			if (cur_byte[cur_disk] > 136) {
-				i = cur_byte[cur_disk];
-				uptr.filebuf.put(i, (byte) (value & 0xFF));
+			if (dptr.cur_byte > 136) {
+				i = dptr.cur_byte;
+				dptr.filebuf.put(i, (byte) (value & 0xFF));
 				writebuf();
 				return (0);
 			}
-			i = cur_byte[cur_disk];
+			i = dptr.cur_byte;
 			dirty = true;
-			dptr = uptr;
-			uptr.filebuf.put(i, (byte) (value & 0xFF));
-			cur_byte[cur_disk]++;
+
+			dptr.filebuf.put(i, (byte) (value & 0xFF));
+			dptr.cur_byte++;
 			return (0);
 		}
 	}
@@ -246,22 +246,22 @@ public class AltairDiskDevice extends Device {
 	void writebuf() throws IOException {
 		long pos;
 		int i;
-		Unit uptr = this.units.get(cur_disk);
-		i = cur_byte[cur_disk]; /* null-fill rest of sector if any */
+		dptr = (AltairDiskUnit) this.units.get(cur_disk);
+		i = dptr.cur_byte; /* null-fill rest of sector if any */
 		while (i < 138) {
-			uptr.filebuf.put(i, (byte) 0x00);
+			dptr.filebuf.put(i, (byte) 0x00);
 			i++;
 		}
 		/*
 		 * printf("\n[%o] OUT 12 (WRITE) T%d S%d", PCX, cur_track[cur_disk],
 		 * cur_sect[cur_disk]); i = getch();
 		 */
-		pos = DSK_TRACSIZE * cur_track[cur_disk]; /* calc file pos */
-		pos += DSK_SECTSIZE * cur_sect[cur_disk];
+		pos = DSK_TRACSIZE * dptr.cur_track; /* calc file pos */
+		pos += DSK_SECTSIZE * dptr.cur_sect;
 		FIO.sim_fseek(dptr.fileref, pos, 0);
-		FIO.sim_fwrite(uptr.filebuf, uptr.fileref);
-		cur_flags[cur_disk] &= 0xFE; /* ENWD off */
-		cur_byte[cur_disk] = 0377;
+		FIO.sim_fwrite(dptr.filebuf, dptr.fileref);
+		dptr.cur_flags &= 0xFE; /* ENWD off */
+		dptr.cur_byte = 0377;
 		dirty = false;
 		return;
 	}
@@ -290,6 +290,10 @@ public class AltairDiskDevice extends Device {
 	}
 
 	public static class AltairDiskUnit extends Unit {
+		public int cur_track = 0;
+		public int cur_sect = 0;
+		public int cur_byte = 0;
+		public int cur_flags = 0;
 
 		@Override
 		public int action(Unit up) {
