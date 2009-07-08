@@ -20,7 +20,21 @@ import org.naturalcli.commands.ExecuteFileCommand;
 import org.naturalcli.commands.HelpCommand;
 
 import emulator.commands.AttachCommand;
+import emulator.commands.BootCommand;
+import emulator.commands.BreakCommand;
+import emulator.commands.ContCommand;
+import emulator.commands.DepositCommand;
+import emulator.commands.DetachCommand;
+import emulator.commands.EvaluateCommand;
+import emulator.commands.ExamineCommand;
+import emulator.commands.ExitCommand;
+import emulator.commands.GoCommand;
+import emulator.commands.NoBreakCommand;
+import emulator.commands.ResetCommand;
+import emulator.commands.RunCommand;
+import emulator.commands.SetCommand;
 import emulator.commands.ShowCommand;
+import emulator.commands.StepCommand;
 
 public class EmuShell implements Shell {
 	public static Connection conn;
@@ -41,9 +55,23 @@ public class EmuShell implements Shell {
 		   // Add the emulator.commands that can be understood
 		   cs.add(new HelpCommand(cs)); // help
 		   cs.add(new ExecuteFileCommand(nc)); // execute file <filename:string>
-		   cs.add(new ShowCommand()); // Show command
-		   cs.add(new AttachCommand()); // attach command
-
+		   //cs.add(new ShowCommand()); // Show command
+		   //cs.add(new AttachCommand()); // attach command
+		   //cs.add(new BootCommand());
+		   //cs.add(new BreakCommand());
+		   //cs.add(new ContCommand());
+		   //cs.add(new DepositCommand());
+		   //cs.add(new DetachCommand());
+		   //cs.add(new EvaluateCommand());
+		   cs.add(new ExamineCommand());
+		   //cs.add(new ExitCommand());
+		   //cs.add(new GoCommand());
+		   //cs.add(new NoBreakCommand());
+		   //cs.add(new ResetCommand());
+		   //cs.add(new RunCommand());
+		   //cs.add(new StepCommand());
+		   //cs.add(new SetCommand());
+		   
 	  }
 	@Override
 	public void run(Connection con) {

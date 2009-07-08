@@ -8,8 +8,7 @@ public abstract class CPU extends Device {
 	public Map<String, Register> registers = new HashMap<String, Register>();
 	public Memory memory;
 	public Map<String, Modifier> modifiers = new HashMap<String, Modifier>();
-	public Map<String, Device> devices = new HashMap<String, Device>();
-	
+
 	public Device cpuDevice;
 
 	/**
@@ -26,5 +25,6 @@ public abstract class CPU extends Device {
 	public abstract long examine(long addr, Unit uptr, long sw);
 
 	public abstract void setSize(Unit uptr, long val, String cptr/* , void *desc */);
+
 
 }

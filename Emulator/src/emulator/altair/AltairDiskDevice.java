@@ -98,9 +98,8 @@ public class AltairDiskDevice extends Device {
 		if (io == 0) { /* IN: return flags */
 			dptr = (AltairDiskUnit) this.units.get(cur_disk);
 			return ((~dptr.cur_flags) & 0xFF); /*
-														 * Return the
-														 * COMPLEMENT!
-														 */
+												 * Return the COMPLEMENT!
+												 */
 		}
 
 		/* OUT: Controller set/reset/enable/disable */

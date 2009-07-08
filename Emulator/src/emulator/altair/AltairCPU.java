@@ -11,6 +11,7 @@ import emulator.core.Globals;
 import emulator.core.Memory;
 import emulator.core.Register;
 import emulator.core.SimEvents;
+import emulator.core.SimSystem;
 import emulator.core.Unit;
 
 public class AltairCPU extends CPU {
@@ -54,7 +55,7 @@ public class AltairCPU extends CPU {
 		// This is the CPU device.
 		this.cpuDevice = this;
 		memory = new Memory();
-		
+
 		memory.m = new int[MEMSIZE]; // Memory
 
 		this.
@@ -171,13 +172,6 @@ public class AltairCPU extends CPU {
 		PCX.value = 0;
 		registers.put(PCX.name, PCX);
 
-		// Devices
-		AltairDiskDevice dsk = new AltairDiskDevice();
-		AltairSerialDevice sio = new AltairSerialDevice();
-		
-		devices.put("DSK", dsk);
-		devices.put("SIO", sio);
-		
 	}
 
 	@Override
@@ -297,7 +291,7 @@ public class AltairCPU extends CPU {
 			}
 			if ((OP & 0xEF) == 0x02) { /* STAX */
 				DAR = getpair((OP >> 4) & 0x03);
-				memory.m[(int) DAR] =  (int) getreg(7);
+				memory.m[(int) DAR] = (int) getreg(7);
 				continue;
 			}
 
@@ -328,7 +322,7 @@ public class AltairCPU extends CPU {
 					SP.value--;
 					memory.m[(int) SP.value] = ((PC >> 8) & 0xff);
 					SP.value--;
-					memory.m[(int) SP.value] =  (PC & 0xff);
+					memory.m[(int) SP.value] = (PC & 0xff);
 					PC = (hi << 8) + lo;
 				} else {
 					PC += 2;
@@ -348,7 +342,7 @@ public class AltairCPU extends CPU {
 				SP.value--;
 				memory.m[(int) SP.value] = ((PC >> 8) & 0xff);
 				SP.value--;
-				memory.m[(int) SP.value] =  (PC & 0xff);
+				memory.m[(int) SP.value] = (PC & 0xff);
 				PC = OP & 0x38;
 				continue;
 			}
@@ -356,9 +350,9 @@ public class AltairCPU extends CPU {
 			if ((OP & 0xCF) == 0xC5) { /* PUSH */
 				DAR = getpush((OP >> 4) & 0x03);
 				SP.value--;
-				memory.m[(int) SP.value] =  (int) ((DAR >> 8) & 0xff);
+				memory.m[(int) SP.value] = (int) ((DAR >> 8) & 0xff);
 				SP.value--;
-				memory.m[(int) SP.value] =  (int) (DAR & 0xff);
+				memory.m[(int) SP.value] = (int) (DAR & 0xff);
 				continue;
 			}
 			if ((OP & 0xCF) == 0xC1) { /* POP */
@@ -521,9 +515,9 @@ public class AltairCPU extends CPU {
 				hi = memory.m[PC];
 				PC++;
 				SP.value--;
-				memory.m[(int) SP.value] =  ((PC >> 8) & 0xff);
+				memory.m[(int) SP.value] = ((PC >> 8) & 0xff);
 				SP.value--;
-				memory.m[(int) SP.value] =  (PC & 0xff);
+				memory.m[(int) SP.value] = (PC & 0xff);
 				PC = (hi << 8) + lo;
 				break;
 			}
@@ -543,7 +537,7 @@ public class AltairCPU extends CPU {
 				hi = memory.m[PC];
 				PC++;
 				DAR = (hi << 8) + lo;
-				memory.m[(int) DAR] =  (int) A.value;
+				memory.m[(int) DAR] = (int) A.value;
 				break;
 			}
 			case 072: { /* LDA */
@@ -561,9 +555,9 @@ public class AltairCPU extends CPU {
 				hi = memory.m[PC];
 				PC++;
 				DAR = (hi << 8) + lo;
-				memory.m[(int) DAR] =  (int) HL.value;
+				memory.m[(int) DAR] = (int) HL.value;
 				DAR++;
-				memory.m[(int) DAR] =  (int) ((HL.value >> 8) & 0x00ff);
+				memory.m[(int) DAR] = (int) ((HL.value >> 8) & 0x00ff);
 				break;
 			}
 			case 052: { /* LHLD */
@@ -743,8 +737,10 @@ public class AltairCPU extends CPU {
 				if (DAR == 0xFF) {
 					A.value = (SR.value >> 8) & 0xFF;
 				} else {
-					AltairDiskDevice dsk = (AltairDiskDevice) devices.get("DSK");
-					AltairSerialDevice sio = (AltairSerialDevice) devices.get("SIO");
+					AltairDiskDevice dsk = (AltairDiskDevice) SimSystem.system.devices
+							.get("DSK");
+					AltairSerialDevice sio = (AltairSerialDevice) SimSystem.system.devices
+							.get("SIO");
 					switch ((int) DAR) {
 					case 8:
 
@@ -774,7 +770,7 @@ public class AltairCPU extends CPU {
 							e.printStackTrace();
 						}
 						break;
-						
+
 					case 16:
 						// sio0s
 						A.value = sio.sio0s(0, 0);
@@ -803,9 +799,11 @@ public class AltairCPU extends CPU {
 			case 0323: { /* OUT */
 				DAR = memory.m[PC] & 0xFF;
 				PC++;
-				AltairDiskDevice dsk = (AltairDiskDevice) devices.get("DSK");
-				AltairSerialDevice sio = (AltairSerialDevice) devices.get("SIO");
-				switch((int) DAR) {
+				AltairDiskDevice dsk = (AltairDiskDevice) SimSystem.system.devices
+						.get("DSK");
+				AltairSerialDevice sio = (AltairSerialDevice) SimSystem.system.devices
+						.get("SIO");
+				switch ((int) DAR) {
 				case 8:
 					// dsk10
 					try {
@@ -851,7 +849,7 @@ public class AltairCPU extends CPU {
 					sio.sio1d(1, A.value);
 					break;
 				default:
-					
+
 				}
 
 				break;
@@ -1081,7 +1079,7 @@ public class AltairCPU extends CPU {
 			HL.value = HL.value | dAR;
 			break;
 		case 6:
-			memory.m[(int) HL.value] =(int) (dAR & 0xff);
+			memory.m[(int) HL.value] = (int) (dAR & 0xff);
 			break;
 		case 7:
 			A.value = dAR & 0xff;
@@ -1243,38 +1241,30 @@ public class AltairCPU extends CPU {
 
 	/* Altair MITS standard BOOT EPROM, fits in upper 256 bytes of memory */
 
-	private int bootrom[] = {
-	    0041, 0000, 0114, 0021, 0030, 0377, 0016, 0346,
-	    0032, 0167, 0023, 0043, 0015, 0302, 0010, 0377,
-	    0303, 0000, 0114, 0000, 0000, 0000, 0000, 0000,
-	    0363, 0061, 0142, 0115, 0257, 0323, 0010, 0076,     /* 46000 */
-	    0004, 0323, 0011, 0303, 0031, 0114, 0333, 0010,     /* 46010 */
-	    0346, 0002, 0302, 0016, 0114, 0076, 0002, 0323,     /* 46020 */
-	    0011, 0333, 0010, 0346, 0100, 0302, 0016, 0114,
-	    0021, 0000, 0000, 0006, 0000, 0333, 0010, 0346,
-	    0004, 0302, 0045, 0114, 0076, 0020, 0365, 0325,
-	    0305, 0325, 0021, 0206, 0200, 0041, 0324, 0114,
-	    0333, 0011, 0037, 0332, 0070, 0114, 0346, 0037,
-	    0270, 0302, 0070, 0114, 0333, 0010, 0267, 0372,
-	    0104, 0114, 0333, 0012, 0167, 0043, 0035, 0312,
-	    0132, 0114, 0035, 0333, 0012, 0167, 0043, 0302,
-	    0104, 0114, 0341, 0021, 0327, 0114, 0001, 0200,
-	    0000, 0032, 0167, 0276, 0302, 0301, 0114, 0200,
-	    0107, 0023, 0043, 0015, 0302, 0141, 0114, 0032,
-	    0376, 0377, 0302, 0170, 0114, 0023, 0032, 0270,
-	    0301, 0353, 0302, 0265, 0114, 0361, 0361, 0052,
-	    0325, 0114, 0325, 0021, 0000, 0377, 0315, 0316,
-	    0114, 0321, 0332, 0276, 0114, 0315, 0316, 0114,
-	    0322, 0256, 0114, 0004, 0004, 0170, 0376, 0040,
-	    0332, 0054, 0114, 0006, 0001, 0312, 0054, 0114,
-	    0333, 0010, 0346, 0002, 0302, 0240, 0114, 0076,
-	    0001, 0323, 0011, 0303, 0043, 0114, 0076, 0200,
-	    0323, 0010, 0303, 0000, 0000, 0321, 0361, 0075,
-	    0302, 0056, 0114, 0076, 0103, 0001, 0076, 0117,
-	    0001, 0076, 0115, 0107, 0076, 0200, 0323, 0010,
-	    0170, 0323, 0001, 0303, 0311, 0114, 0172, 0274,
-	    0300, 0173, 0275, 0311, 0204, 0000, 0114, 0044,
-	    0026, 0126, 0026, 0000, 0000, 0000, 0000, 0000
-	};
+	private int bootrom[] = { 0041, 0000, 0114, 0021, 0030, 0377, 0016, 0346,
+			0032, 0167, 0023, 0043, 0015, 0302, 0010, 0377, 0303, 0000, 0114,
+			0000, 0000, 0000, 0000, 0000, 0363, 0061, 0142, 0115, 0257, 0323,
+			0010, 0076, /* 46000 */
+			0004, 0323, 0011, 0303, 0031, 0114, 0333, 0010, /* 46010 */
+			0346, 0002, 0302, 0016, 0114, 0076, 0002, 0323, /* 46020 */
+			0011, 0333, 0010, 0346, 0100, 0302, 0016, 0114, 0021, 0000, 0000,
+			0006, 0000, 0333, 0010, 0346, 0004, 0302, 0045, 0114, 0076, 0020,
+			0365, 0325, 0305, 0325, 0021, 0206, 0200, 0041, 0324, 0114, 0333,
+			0011, 0037, 0332, 0070, 0114, 0346, 0037, 0270, 0302, 0070, 0114,
+			0333, 0010, 0267, 0372, 0104, 0114, 0333, 0012, 0167, 0043, 0035,
+			0312, 0132, 0114, 0035, 0333, 0012, 0167, 0043, 0302, 0104, 0114,
+			0341, 0021, 0327, 0114, 0001, 0200, 0000, 0032, 0167, 0276, 0302,
+			0301, 0114, 0200, 0107, 0023, 0043, 0015, 0302, 0141, 0114, 0032,
+			0376, 0377, 0302, 0170, 0114, 0023, 0032, 0270, 0301, 0353, 0302,
+			0265, 0114, 0361, 0361, 0052, 0325, 0114, 0325, 0021, 0000, 0377,
+			0315, 0316, 0114, 0321, 0332, 0276, 0114, 0315, 0316, 0114, 0322,
+			0256, 0114, 0004, 0004, 0170, 0376, 0040, 0332, 0054, 0114, 0006,
+			0001, 0312, 0054, 0114, 0333, 0010, 0346, 0002, 0302, 0240, 0114,
+			0076, 0001, 0323, 0011, 0303, 0043, 0114, 0076, 0200, 0323, 0010,
+			0303, 0000, 0000, 0321, 0361, 0075, 0302, 0056, 0114, 0076, 0103,
+			0001, 0076, 0117, 0001, 0076, 0115, 0107, 0076, 0200, 0323, 0010,
+			0170, 0323, 0001, 0303, 0311, 0114, 0172, 0274, 0300, 0173, 0275,
+			0311, 0204, 0000, 0114, 0044, 0026, 0126, 0026, 0000, 0000, 0000,
+			0000, 0000 };
 
 }
